@@ -1,5 +1,6 @@
 # Harvard Business Analytics Program's Leadership And People Analytics Course: Hiring Committee Simulation
-This body of work identifies the top candidate for a simulated position given a list of resumes. The work involved reviewing &amp; ranking candidates, collaborating with cross-disciplinary team members, visualizing the rankings of team members, &amp; creating a model to identify who is promotable given a dataset of historical promotions at other companies.
+Harvard Business Analytics Program's Hiring Committee Simulation is a final project which identifies the top candidate for a simulated position given a list of resumes. This work involved reviewing & ranking candidates, collaborating with cross-disciplinary teammembers, visualizing their rankings, & modeling predictions of promotable candidates given a dataset of historical promotions at other companies.
+
 
 - [Hiring Committee: Final Report](./Hiring_Committee.pdf)
 - [Hiring Commitee: R Source Code](./Hiring_Committee.rmd)
