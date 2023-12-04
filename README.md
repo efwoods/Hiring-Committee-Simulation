@@ -7,10 +7,10 @@ This body of work identifies the top candidate for a simulated position given a 
 - [Linear Model Employee Training Data](https://www.kaggle.com/datasets/arashnic/hr-ana?select=train.csv)
 - [Linear Model Employee Test Data](Weighted%20Buckets%20-%20Employee_data.csv)
 
-# Final Grouped Average Ranking Given the Sum of 360 Simulated Peer-Scoring Weights and the Normalized Weighted Rankings of the Group:
+# Final Grouped Average Ranking Given the Sum of 360 Simulated Peer-Scoring Weights & the Normalized Weighted Rankings of the Group:
 ![](./plots/ranked_candidates.png)
 
-# Prediction of Employee Promotion Given Historical Promotions of Employees
+# Prediction of Employee Promotion Given Historical Promotions of Employees:
 ![](./plots/Employee_promotion_prediction_model_3.png)
 
 My performance during this Leadership & People Analytics course earned a nomination for distinction from the teaching team based upon the extent to which I:
