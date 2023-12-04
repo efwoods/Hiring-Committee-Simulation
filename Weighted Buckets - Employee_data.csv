@@ -1,0 +1,13 @@
+employee_id,education,previous_year_rating,length_of_service,awards_won
+1,Bachelor's,0.819,13,0
+2,Master's & above,0.724,11,0
+3,Master's & above,0.944,13,0
+4,Bachelor's,0.876,15,0
+5,Bachelor's,0.711,15,0
+6,Master's & above,0.733,14,0
+7,Master's & above,0.79,10,0
+8,Master's & above,0.721,11,0
+9,Bachelor's,0.812,9,0
+10,Master's & above,0.809,13,0
+11,Bachelor's,0.929,7,0
+12,Master's & above,0.936,7,1

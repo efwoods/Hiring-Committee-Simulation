@@ -1,0 +1,969 @@
+---
+title: "Hiring Committee"
+date: "2023-11-11"
+author: "Evan Woods"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax
+for authoring HTML, PDF, and MS Word documents. For more details on
+using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that
+includes both content as well as the output of any embedded R code
+chunks within the document. You can embed an R code chunk like this:
+
+Note that the `echo = FALSE` parameter was added to the code chunk to
+prevent printing of the R code that generated the plot.
+
+# Setup and Installation
+
+### Install Packages
+
+```{r Install Packages}
+install.packages("tidyverse")
+library(tidyverse)
+```
+
+```{r}
+if (!require(dplyr)) install.packages("dplyr")
+if (!require(ggplot2)) install.packages("ggplot2")
+if (!require(jtools)) install.packages("jtools")
+if (!require(caTools)) install.packages("caTools")
+if (!require(gmodels)) install.packages("gmodels")
+if(!require(stargazer)) install.packages("stargazer")
+```
+
+### Plot Save Location
+
+```{r}
+plot_save_base_local = "/Users/evanwoods/Github/lpa/Round3/plots/"
+plot_save_base_cloud = "/cloud/project/Hiring_Committee/plots/"
+plot_save_base = plot_save_base_cloud
+```
+
+### Read CSV location
+
+```{r}
+read_csv_local = "/Users/evanwoods/Github/lpa/Round3/"
+read_csv_cloud = "/cloud/project/Hiring_Committee/"
+read_csv_base = read_csv_cloud
+```
+
+### Assigning Weights
+
+```{r}
+weights_360 <- 0.55
+weights_group <- 0.45
+weights_model <- 0.00
+```
+
+# Manually Creating an Algorithm
+
+### 360 Data
+
+```{r}
+three_sixty_rankings <- c(8.19, 7.24, 9.44, 8.76, 7.11, 7.33, 7.9, 7.21, 8.12, 8.09, 9.29, 9.36)
+```
+
+### Normalized 360
+
+```{r}
+(normalized_three_sixty_rankings <- three_sixty_rankings / 10)
+```
+
+### Normalized and Weighted 360 Rankings
+
+```{r}
+(normalized_and_weighted_360_rankings <- normalized_three_sixty_rankings * weights_360)
+final_360_rankings <- normalized_and_weighted_360_rankings
+```
+
+## Base Model
+
+```{r}
+# Manually Create Candidates
+candidates_list <- c("Laura Andrews", "Teresa Baker", "Lewis Brennan", "Vivian Cheong", "Lucas Davies", "Imani Kironde", "Samuel Melendez", "Amy Nguyen", "Russell Myer", "Ish Patel", "Valerie Peterson", "David Rice")
+
+# Manually Assign Scores to Candidates
+# Evan
+e_woods_rankings <- c(12, 6, 8, 4, 1, 2, 5, 11, 7, 3, 9, 10)
+
+# Deepa
+deepa_rankings <- c(11,7,9,3,6,10,4,8,5,1,2,12)
+
+# Jason
+jason_rankings <- c(8,2,12,4,1,3,6,10,9,5,7,11)
+
+# Eras
+eras <- c(11,5,9,2,4,1,8,10,6,3,7,12)
+
+# Celeste
+celeste <- c(5,10,1,4,12,9,8,11,6,7,3,2)
+
+# Calculating a total
+total <- (e_woods_rankings + deepa_rankings + jason_rankings + eras + celeste) / 5
+
+# Creating a dataframe
+basic_candidate_rankings <- data.frame(candidates_list, e_woods_rankings, deepa_rankings,  jason_rankings, eras, celeste, total)
+
+# Showing the dataframe by total
+manual_candidate_rankings_by_total <- arrange(basic_candidate_rankings, total)
+
+# variablity as a tie breaker
+(manual_candidate_rankings_by_total)
+```
+
+# Creating an Algorithmic Pipeline
+
+### Reading in Data
+
+```{r}
+csv_filename <- "Weighted Buckets - Weighted_Totals_And_Rankings.csv"
+read_csv_location <- str_c(read_csv_base, csv_filename)
+candidate_df <- read_csv(read_csv_location)
+```
+
+### Including three_sixty_rankings to the weighted buckets
+
+```{r}
+(candidate_df <- mutate(candidate_df, normalized_and_weighted_360_rankings))
+```
+
+### Creating Adjusted Values to Establish Values between 0 - 11 for Normalization
+
+```{r Creating Adjusted Values to Establish Values between 0 - 11 for Normalization}
+candidate_df <- mutate(candidate_df, Jason = candidate_df$Jason - 1)
+candidate_df <- mutate(candidate_df, Deepa = candidate_df$Deepa - 1)
+candidate_df <- mutate(candidate_df, Evan = candidate_df$Evan - 1)
+candidate_df <- mutate(candidate_df, Celeste = candidate_df$Celeste - 1)
+candidate_df <- (mutate(candidate_df, Eras = candidate_df$Eras - 1))
+```
+
+### Creating a Group Sum
+
+```{r}
+group_sum <- candidate_df$Jason + candidate_df$Deepa + candidate_df$Evan + candidate_df$Eras + candidate_df$Celeste
+```
+
+### Defining a difference from the total possible sum from the calculated sum: This will cause top candidates to have larger values
+
+```{r}
+top_candidate_highest_value_sum <- 55 - group_sum
+```
+
+### Creating an average of the sum
+
+```{r}
+average_of_top_candidate_highest_value_sum <- top_candidate_highest_value_sum / 5
+```
+
+### Normalizing the average: Values range from 0 to 11; Normalizing the values to range from 0 to 1
+
+```{r}
+average_of_top_candidate_highest_value_sum <- average_of_top_candidate_highest_value_sum / 11
+```
+
+### Scaling the Normalized average
+
+```{r}
+weighted_normalized_group_average <- average_of_top_candidate_highest_value_sum * weights_group
+```
+
+### Creating Weighted Totals
+
+```{r}
+weighted_totals <- weighted_normalized_group_average + normalized_and_weighted_360_rankings
+```
+
+### Creating a Data Frame Containing Candidates Ranked By Weighted Totals
+
+```{r}
+candidates_weighted_totals <- data.frame(candidates_list, weighted_totals, row.names = NULL, check.rows = FALSE, check.names = TRUE)
+```
+
+### Creating a Sorted Data Frame Ranked By Weighted Totals
+
+```{r}
+ranked_candidates_weighted_totals <- arrange(candidates_weighted_totals, desc(weighted_totals))
+ranked_candidates_weighted_totals
+```
+
+### Creating Weighted Rankings
+
+```{r Top Rank Individual By Weighted Ranking}
+
+# Adding the three_sixty_rankings to the candidate_df
+mutate(candidate_df, three_sixty_rankings)
+
+arrange(candidate_df, desc(candidate_df$'Weighted Totals'))
+```
+
+# Section: Plotting Individual Scores
+
+### Deepa's Scores
+
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Deepa, fill = candidates_list)) +
+  labs(title = "Deepa's Rankings", y = "Rank of Candidate", x = "Candidates", fill = "Candidates", alpha = "Weighted Totals", caption = "Smaller Values Indicate Better Candidates", tag = "Figure 1") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "Deepa_rankings.png")
+ggsave(plot_save)
+```
+
+### Jason's Scores
+
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Jason, fill = candidates_list)) +
+  labs(title = "Jason's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", tag = "Figure 2") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "Jason_rankings.png")
+ggsave(plot_save)
+```
+
+### Evan's Scores
+
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Evan, fill = candidates_list)) +
+  labs(title = "Evan's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", tag = "Figure 3") +
+  coord_flip()
+  
+plot_save = str_c(plot_save_base, "Evan_rankings.png")
+ggsave(plot_save)
+```
+
+### Eras' Scores
+
+```{r Plotting and Saving Scores of Eras}
+ ggplot(candidate_df) + 
+   geom_col(aes(candidates_list, Eras, fill = candidates_list)) +
+  labs(title = "Eras's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", fill = "Candidates", tag = "Figure 4") +
+   coord_flip()
+
+plot_save = str_c(plot_save_base, "Eras_ranking.png")
+ggsave(plot_save)
+```
+
+### Celeste Scores
+
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Celeste, fill = candidates_list)) +
+  labs(title = "Celeste's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", fill = "Candidates", tag = "Figure 5") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "Celeste_ranking.png")
+ggsave(plot_save)
+```
+
+# Section: Transforming Data
+
+### Candidates As Columns Original Rankings (Lower Rank Is Best Candidate for 360, Group, and Totals)
+
+```{r}
+Metric <- row_names <- c("Evan", "Deepa", "Jason", "Celeste", "Eras", "360", "Group", "Totals")
+
+for (x in seq_along(candidates_list)) {
+
+  candidate <- c((candidate_df$Evan[x] + 1), (candidate_df$Deepa[x] + 1), (candidate_df$Jason[x] + 1), (candidate_df$Celeste[x] + 1), (candidate_df$Eras[x] + 1), normalized_and_weighted_360_rankings[x], weighted_normalized_group_average[x], weighted_totals[x])
+
+  if (x == 1){
+    candidates_as_columns <- data.frame(candidate)
+  } else {
+    candidates_as_columns <- data.frame(candidates_as_columns, candidate)
+  }
+  
+  # print(candidates_list[x])
+  # print(e_woods_rankings[x])
+  # print(deepa_rankings[x])
+  # print(jason_rankings[x])
+  # print(normalized_and_weighted_360_rankings[x])
+
+}
+
+colnames(candidates_as_columns) <- candidates_list
+rownames(candidates_as_columns) <- Metric
+
+# candidates_as_columns <- data.frame(candidates_as_columns, Metric)
+
+(candidates_as_columns)
+```
+
+
+### Candidates As Columns Scaled Rankings (Higher Values Are Best Candidate; Aligned with 360 and Group and Totals)
+
+```{r}
+Metric <- c("Evan", "Deepa", "Jason", "Celeste", "Eras", "360", "Group", "Totals")
+
+for (x in seq_along(candidates_list)) {
+  
+  candidate <- c((1-(candidate_df$Evan[x]/11)), (1-(candidate_df$Deepa[x]/11)), (1-(candidate_df$Jason[x]/11)), (1-(candidate_df$Celeste[x]/11)), (1-(candidate_df$Eras[x]/11)), normalized_and_weighted_360_rankings[x],weighted_normalized_group_average[x], weighted_totals[x])
+  
+  if (x == 1){
+    candidates_as_columns_scaled <- data.frame(candidate)
+  } else {
+    candidates_as_columns_scaled <- data.frame(candidates_as_columns_scaled, candidate)
+  }
+  
+  # print(candidates_list[x])
+  # print(e_woods_rankings[x])
+  # print(deepa_rankings[x])
+  # print(jason_rankings[x])
+  # print(normalized_and_weighted_360_rankings[x])
+
+}
+
+colnames(candidates_as_columns_scaled) <- candidates_list
+rownames(candidates_as_columns_scaled) <- Metric
+
+# candidates_as_columns_scaled <- data.frame(candidates_as_columns_scaled, Metric)
+
+(candidates_as_columns_scaled)
+```
+
+# Section: Viewing Candidates Data
+
+### Section: Candidates as Columns View
+
+```{r}
+candidates_as_columns_scaled
+```
+
+```{r}
+candidates_list
+```
+
+#### Section: View Specific Candidates Original Rankings
+
+```{r}
+candidates_to_view <- c("Ish Patel", "Vivian Cheong", "")
+select(candidates_as_columns, any_of(candidates_to_view))
+```
+
+#### Section: View Specific Candidates With Scaled Rankings
+
+```{r}
+candidates_to_view <- c("David Rice", "Valerie Peterson", "")
+select(candidates_as_columns_scaled, any_of(candidates_to_view))
+```
+
+### Section: Candidates As Rows and Ranking
+
+#### Section: Candidates By Row, Weighted Totals, Normalized and Weighted 360 Rankings, Weighted Normalized Group Average, Individual Group Member Rankings from 0 - 11 (0 being the most significant)
+
+```{r}
+(master_candidates_as_rows_df <- mutate(candidates_weighted_totals, normalized_and_weighted_360_rankings, weighted_normalized_group_average, candidate_df$Evan, candidate_df$Deepa, candidate_df$Jason, candidate_df$Celeste, candidate_df$Eras))
+```
+
+```{r}
+(master_candidates_as_rows_df <- mutate(candidates_weighted_totals, normalized_and_weighted_360_rankings, weighted_normalized_group_average, candidate_df$Evan, candidate_df$Deepa, candidate_df$Jason, candidate_df$Celeste, candidate_df$Eras))
+```
+
+#### Section: Scaled Candidates As Rows
+
+```{r fig.align='center'}
+(scaled_master_candidates_as_rows_df <- mutate(candidates_weighted_totals, normalized_and_weighted_360_rankings, weighted_normalized_group_average, 1-candidate_df$Evan/11, 1-candidate_df$Deepa/11, 1-candidate_df$Jason/11, 1-candidate_df$Celeste/11, 1-candidate_df$Eras/11))
+```
+
+```{r Setting Column Names To Rename Columns}
+col_names_scaled_master_candidates_as_rows_df <- c("Candidates", "Totals", "Rankings_360", "Group_Average", "Evan_rankings", "Deepa_rankings", "Jason_rankings", "Celeste_rankings", "Eras_rankings")
+```
+
+```{r}
+colnames(scaled_master_candidates_as_rows_df) <- col_names_scaled_master_candidates_as_rows_df
+```
+
+```{r}
+scaled_master_candidates_as_rows_df
+```
+
+#### Section: Ranked Scaled Candidates By Rows Master List.
+
+```{r}
+  ranked_candidates_weighted_totals <- arrange(scaled_master_candidates_as_rows_df, desc(Totals))
+```
+
+```{r}
+ranked_candidates_weighted_totals
+```
+
+# Plotting
+
+### 360 Rankings
+
+```{r}
+ggplot(ranked_candidates_weighted_totals) + 
+  geom_col(aes(x = Candidates, y = Rankings_360, fill = Rankings_360, alpha = Rankings_360)) + 
+  ylab("360 Score") + 
+labs(title = "360 Rankings", fill = "360 Rankings", alpha = "360 Rankings", caption = "Values Range from 0 to 1\n 1 Indicates Most Significant", tag = "Figure 6") + 
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "360_Rankings.png")
+ggsave(plot_save)
+```
+
+### Group Rankings
+
+```{r}
+ggplot(ranked_candidates_weighted_totals) + 
+  geom_col(aes(x = Candidates, y = Group_Average, fill = Group_Average, alpha = Group_Average)) + 
+  ylab("Group Average Score") + 
+    labs(title = "Group Average", fill = "Group Average", alpha = "Group Average", caption = "Values Range from 0 to 1\n 1 is Most Significant", tag = "Figure 7") +  
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "Group_Average.png")
+ggsave(plot_save)
+```
+
+```{r}
+ranked_candidates_weighted_totals
+```
+
+### Ranked Candidates By Weighted Totals
+
+```{r}
+ggplot(ranked_candidates_weighted_totals) +
+  geom_col(aes(x = candidates_list, y = weighted_totals, fill = candidates_list)) +
+    labs(y = "Weighted Rankings", x = "Candidates", fill = "Candidates", title = "Ranked Candidates By Weighted Totals", Subtitle = "Greater Scores Indicate Better Candidates", caption = "Group Weight: 0.45\n360 Weight: 0.55", tag = "Figure 8") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "ranked_candidates.png")
+ggsave(plot_save)
+```
+
+##### Assigning Weights
+
+```{r 55 on 360 and 45 on group}
+weights_360 <- 0.55
+weights_group <- 0.45
+weights_model <- 0.00
+```
+
+# Linear Model Creation
+
+```{r}
+set.seed(42)
+```
+
+
+### 1) Key Point: Data Dictionary
+
+```{r}
+# Data Dictionary
+
+# employee_id: Unique ID for employee
+# department: Department of employee
+# region: Region of employment (unordered)
+# education: Education Level
+# gender: Gender of Employee
+# recruitment_channel: Channel of recruitment for employee
+# no_of_trainings: no of other trainings completed in previous year on soft skills, technical skills etc.
+# age: Age of Employee
+# previous_year_rating: Employee Rating for the previous year
+# length_of_service: Length of service in years
+# awards_won?: if awards won during previous year then 1 else 0
+# avg_training_score: Average score in current training evaluations
+# is_promoted: (Target) Recommended for promotion
+```
+
+### Import Data
+
+```{r Dataset}
+# https://www.kaggle.com/datasets/arashnic/hr-ana?select=train.csv
+
+  csv_filename <- "employee_promotion.csv"
+  read_csv_location <- str_c(read_csv_base, csv_filename)
+
+  employee_promotion_dataset <- read_csv(read_csv_location)
+```
+
+### Clean Data
+
+```{r}
+clean_employee_promotion_dataset <- drop_na(employee_promotion_dataset)
+```
+
+```{r}
+  (clean_employee_promotion_dataset)
+```
+
+### Exploratory Data Analysis
+
+```{r}
+  summary(clean_employee_promotion_dataset)
+```
+
+### Normalizing previous_year_rating
+
+```{r}
+clean_employee_promotion_dataset$previous_year_rating <- clean_employee_promotion_dataset$previous_year_rating/5
+```
+
+```{r}
+  summary(clean_employee_promotion_dataset)
+```
+
+### Separate Data Into Train and Test Sets
+
+```{r Splitting the data}
+clean_employee_promotion_dataset$train <- sample.split(clean_employee_promotion_dataset$is_promoted, SplitRatio = 0.5)
+```
+
+```{r Viewing the Split data}
+table(clean_employee_promotion_dataset$train, clean_employee_promotion_dataset$is_promoted)
+```
+
+```{r}
+train_set <- subset(clean_employee_promotion_dataset, clean_employee_promotion_dataset$train == TRUE)
+```
+
+```{r}
+test_set <- subset(clean_employee_promotion_dataset, clean_employee_promotion_dataset$train == FALSE)
+```
+
+### Model 1: Education, Scoring From Peers, Length of Service, Awards Won
+
+```{r Backwards step model creation}
+model1 <- glm(is_promoted ~ as.factor(education) + previous_year_rating + length_of_service + awards_won, data = train_set, family = "binomial")
+```
+
+#### Model 1: Summary
+
+```{r}
+summ(model1, type = "text", digits = 2)
+```
+
+
+```{r Testing the Model}
+test_set$is_promoted_prediction <- predict(model1, data=test_set, type="response")
+```
+
+#### 2) Key Point: Distribution of Test Set Predictions
+
+```{r fig.align='center'}
+ggplot(test_set, aes(is_promoted_prediction)) + 
+  geom_histogram(color = "white", fill = "lightblue", bins = 30) +
+  labs(title = "Probability Distribution of Employee Promotion Predictions", x = "Prediction of Promotion", caption = "Values Range From 0 to 1\n\nAccuracy: 89.4\nPrecision: 9.58\nRecall: 2.46", tag = "Figure 9")
+```
+
+```{r}
+plot_save = str_c(plot_save_base, "Distribution_of_Employee_Promotion_Predictions.png")
+ggsave(plot_save)
+```
+
+```{r}
+#install.packages("caret")
+#install.packages("e1071")
+#library(caret)
+#library(e1071)
+
+library(ModelMetrics)
+
+```
+
+#### 3) Key Point: Confusion Matrix
+
+```{r}
+  CrossTable(as.numeric(test_set$is_promoted_prediction>0.2), as.numeric(test_set$is_promoted))
+```
+
+#### 4) Key Metrics
+```{r}
+tp <- 50
+tn <- 20683
+fp <- 472
+fn <- 1985
+
+accuracy <- (tp + tn) / (tp + tn + fp + fn)
+precision <- tp / (tp + fp)
+recall <- tp / (tp + fn)
+
+(key_metrics <- data.frame(accuracy, precision, recall))
+(key_metrics_percentiles <- key_metrics * 100)
+```
+
+
+#### Employee Predictions
+
+```{r reading employee data}
+csv_filename <- "Weighted Buckets - Employee_data.csv"
+read_csv_location <- str_c(read_csv_base, csv_filename)
+
+employee_lm_model_data <- read_csv(read_csv_location)
+```
+
+```{r Employee Prediction}
+employee_model_prediction <- predict(model1, employee_lm_model_data, type="response")
+```
+
+```{r Prediction of Promotion}
+# With a cutoff of 0.01, Lucas Davies would be promoted. 
+lm_predicted_df <- data.frame(candidates_list, employee_model_prediction)
+lm_predicted_df
+```
+
+#### Plot of Employee Predictions Model 1
+
+```{r fig.align='center'}
+ggplot(lm_predicted_df, aes(candidates_list, employee_model_prediction)) + 
+  geom_col(aes(fill = candidates_list)) +
+  geom_hline(yintercept = .1) +
+    labs(y = "Predicted Score", x = "Candidate", title = "Model 1: Employee Predictions", subtitle = "Features: \nEducation\nTime at Company\nScores of Peers \nAwards", fill = "Candiates", caption = "AIC: 12,573.18\n p < 0.05:\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02\nAwards Won: Est. 2.26", tag = "Figure 10") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "Employee_promotion_prediction_model_1.png")
+ggsave(plot_save)
+```
+
+z### Model 2: Education, Scoring From Peers, Length of Service
+
+```{r Creating Model 2}
+model2 <- glm(is_promoted ~ as.factor(education) + previous_year_rating + length_of_service, data = train_set, family = "binomial")
+```
+
+#### Model 2 Summary
+
+```{r}
+summ(model2, type = "text")
+```
+
+```{r Employee prediction model 2}
+employee_promotion_prediction_model2_sans_awards <- predict(model2, employee_lm_model_data, type="response")
+```
+
+```{r Dataframe of employee model 2}
+lm_employee_promotion_prediction_model2 <- data.frame(candidates_list, employee_promotion_prediction_model2_sans_awards)
+lm_employee_promotion_prediction_model2
+```
+
+#### Plot of Employee Predictions: Model 2 Plot
+
+```{r fig.align='center'}
+ggplot(lm_employee_promotion_prediction_model2, aes(candidates_list, employee_promotion_prediction_model2_sans_awards)) +
+  geom_col(aes(fill = candidates_list)) +
+  geom_hline(yintercept = .1) +
+    labs(title = "Model 2: Employee Predictions", subtitle = "Features: \nEducation \nTime at Company\nScores by Peers", x = "Candidates", y = "Predicted Value", fill = "Candidates", caption = "AIC: 13,109.84\np < 0.05\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02", tag = "Figure 11") +
+  coord_flip()
+
+plot_save <- str_c(plot_save_base, "Employee_promotion_prediction_model_2.png")
+ggsave(plot_save)
+```
+
+### Model 3
+
+```{r Creating Model 3}
+model3 <- glm(is_promoted ~ previous_year_rating + length_of_service, data = train_set, family = "binomial")
+```
+
+#### Model 3 Summary
+
+```{r}
+summ(model3, digits = 2)
+```
+
+```{r Employee prediction model 3}
+employee_promotion_prediction_model3_sans_awards_education <- predict(model3, employee_lm_model_data, type="response")
+```
+
+```{r Dataframe of employee model 3}
+lm_employee_promotion_prediction_model3 <- data.frame(candidates_list, employee_promotion_prediction_model3_sans_awards_education)
+lm_employee_promotion_prediction_model3
+```
+
+#### Plot of Employee Predictions: Model 3
+
+```{r fig.align='center'}
+ggplot(lm_employee_promotion_prediction_model3, aes(candidates_list, employee_promotion_prediction_model3_sans_awards_education)) +
+  geom_col(aes(fill = candidates_list)) +
+  geom_hline(yintercept = .1) +
+  labs(title = "Model 3: Employee Predictions", subtitle = "Features: \nTime at Company\nScores by Peers", fill = "Candidates", x = "Candidates", y = "Predicted Value", captions = "AIC: 13,107.10\np < 0.05\n Rating From Peers: Est. 2.67\nLength of Service: -0.02", tag = "Figure 12") +
+  coord_flip()
+
+plot_save <- str_c(plot_save_base, "Employee_promotion_prediction_model_3.png")
+ggsave(plot_save)
+```
+
+### Summary
+
+Model 1 is the best fit. It is best to keep in mind the cutoff is a
+binary value of if the candidate would be promoted, not a goodness of
+fit based upon the qualifications for the particular role.
+
+# Including Model Weights
+
+### Re-Assigning Weights
+
+```{r}
+pre_model_weights_360 <- 0.45
+pre_model_weights_group <- 0.55
+
+post_model_weights_360 <- 0.40
+post_model_weights_group <- 0.55
+post_model_weights_model <- 0.05
+```
+
+```{r}
+weighted_model_education_peerReview_lengthAtCompany_Awards <- employee_model_prediction * post_model_weights_model
+
+weighted_model_education_peerReview_lengthAtCompany <- employee_promotion_prediction_model2_sans_awards * post_model_weights_model
+
+weighted_model_peerReview_lengthAtCompany <- employee_promotion_prediction_model3_sans_awards_education * post_model_weights_model
+```
+
+```{r Post Model Normalized and Weighted 360 Rankings}
+(post_model_normalized_and_weighted_360_rankings <- normalized_three_sixty_rankings * post_model_weights_360)
+```
+
+```{r Scaling the Normalized average}
+(post_model_weighted_normalized_group_average <- average_of_top_candidate_highest_value_sum * post_model_weights_group)
+```
+
+### Creating Weighted Totals
+
+```{r Creating Weighted Totals}
+model1_post_model_weighted_totals_education_peerReview_lengthAtCompany_Awards <- post_model_weighted_normalized_group_average + post_model_normalized_and_weighted_360_rankings + weighted_model_education_peerReview_lengthAtCompany_Awards
+
+model2_post_model_weighted_totals_education_peerReview_lengthAtCompany <- post_model_weighted_normalized_group_average + post_model_normalized_and_weighted_360_rankings + weighted_model_education_peerReview_lengthAtCompany
+
+model3_post_model_weighted_totals_peerReview_lengthAtCompany <- post_model_weighted_normalized_group_average + post_model_normalized_and_weighted_360_rankings + weighted_model_peerReview_lengthAtCompany
+
+```
+
+```{r Creating Weighted Totals and Setting Column Names To Rename Columns}
+post_model_col_names_scaled_master_candidates_as_rows_df <- c("Candidates", "Totals", "Rankings_360", "Group_Average", "Evan_rankings", "Deepa_rankings", "Jason_rankings", "Celeste_rankings", "Eras_rankings", "totals_model1", "totals_model2", "totals_model3") 
+```
+
+```{r Mutating new columns into scaled_master_candidates_as_rows_df}
+post_model_scaled_master_candidates_as_rows_df <- mutate(scaled_master_candidates_as_rows_df, model1_post_model_weighted_totals_education_peerReview_lengthAtCompany_Awards, model2_post_model_weighted_totals_education_peerReview_lengthAtCompany, model3_post_model_weighted_totals_peerReview_lengthAtCompany)
+```
+
+```{r}
+post_model_scaled_master_candidates_as_rows_df
+```
+
+```{r}
+colnames(post_model_scaled_master_candidates_as_rows_df) <- post_model_col_names_scaled_master_candidates_as_rows_df
+```
+
+```{r Rearrange columns}
+post_model_scaled_master_candidates_as_rows_df <- select(post_model_scaled_master_candidates_as_rows_df, "Candidates", "Totals", "totals_model1", "totals_model2", "totals_model3", "Rankings_360", "Group_Average", "Evan_rankings", "Deepa_rankings", "Jason_rankings", "Celeste_rankings")
+```
+
+```{r rearrange observations}
+Ranked_model_1_post_model_scaled_master_candidates_as_rows_df <- arrange(post_model_scaled_master_candidates_as_rows_df, desc(totals_model1))
+
+Ranked_model_2_post_model_scaled_master_candidates_as_rows_df <- arrange(post_model_scaled_master_candidates_as_rows_df, desc(totals_model2))
+
+Ranked_model_3_post_model_scaled_master_candidates_as_rows_df <- arrange(post_model_scaled_master_candidates_as_rows_df, desc(totals_model3))
+```
+
+```{r}
+Ranked_model_1_post_model_scaled_master_candidates_as_rows_df
+Ranked_model_2_post_model_scaled_master_candidates_as_rows_df
+Ranked_model_3_post_model_scaled_master_candidates_as_rows_df
+```
+
+### Plotting Models
+
+#### Weighted Total Rankings With Model 1
+
+```{r fig.align='center'}
+ggplot(Ranked_model_1_post_model_scaled_master_candidates_as_rows_df) +
+  geom_col(aes(x = candidates_list, y = totals_model1, fill = candidates_list)) +
+  labs(title = "Weighted Total Rankings Including Model 1", y = "Weighted Rankings", x = "Candidates", fill = "Candidates", subtitle = "Features:\nEducation\nScoring From Peers\nLength of Service\nAwards", caption = "AIC: 12,573.18\n p < 0.05:\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02\nAwards Won: Est. 2.26", tag = "Figure 14") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "ranked_candidates_model1.png")
+ggsave(plot_save)
+```
+
+#### Weighted Total Rankings With Model 2
+
+```{r fig.align='center'}
+ggplot(Ranked_model_2_post_model_scaled_master_candidates_as_rows_df) +
+  geom_col(aes(x = candidates_list, y = totals_model2, fill = candidates_list)) +
+labs(title = "Weighted Total Rankings Including Model 2", y = "Weighted Rankings", x = "Candidates", fill = "Candidates", subtitle = "Features:\nEducation\nScoring From Peers\nTime at Company", caption = "AIC: 13,109.84\np < 0.05\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02", tag = "Figure 15") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "ranked_candidates_model2.png")
+ggsave(plot_save)
+```
+
+#### Weighted Total Rankings With Model 3
+
+```{r fig.align='center'}
+ggplot(Ranked_model_3_post_model_scaled_master_candidates_as_rows_df) +
+  geom_col(aes(x = candidates_list, y = totals_model3, fill = candidates_list)) +
+    labs(title = "Weighted Total Rankings Including Model 3", y = "Weighted Rankings", x = "Candidates", fill = "Candidates", subtitle = "Features:\nScoring from Peers\nLength of Service", captions = "AIC: 13,107.10\np < 0.05\n Rating From Peers: Est. 2.67\nLength of Service: Est. -0.02", tag = "Figure 16") +
+  coord_flip()
+
+plot_save = str_c(plot_save_base, "ranked_candidates_model3.png")
+ggsave(plot_save)
+```
+
+# Section: Final Plots.
+
+### Figure 1: Deepa's Scores
+
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Deepa, fill = candidates_list)) +
+  labs(title = "Deepa's Rankings", y = "Rank of Candidate", x = "Candidates", fill = "Candidates", alpha = "Weighted Totals", caption = "Smaller Values Indicate Better Candidates", tag = "Figure 1") +
+  coord_flip()
+```
+
+### Figure 2: Jason's Scores
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Jason, fill = candidates_list)) +
+  labs(title = "Jason's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", tag = "Figure 2") +
+  coord_flip()
+```
+
+### Figure 3: Evan's Scores
+
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Evan, fill = candidates_list)) +
+  labs(title = "Evan's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", tag = "Figure 3") +
+  coord_flip()
+```
+
+### Figure 4: Eras' Scores
+
+```{r Plotting Scores of Eras}
+ ggplot(candidate_df) + 
+   geom_col(aes(candidates_list, Eras, fill = candidates_list)) +
+  labs(title = "Eras's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", fill = "Candidates", tag = "Figure 4") +
+   coord_flip()
+```
+
+### Figure 5: Celeste's Scores
+```{r}
+ggplot(candidate_df) + 
+  geom_col(aes(candidates_list, Celeste, fill = candidates_list)) +
+  labs(title = "Celeste's Rankings", x = "Candidates", y = "Rank", caption = "Smaller Values Indicate Better Candidates", fill = "Candidates", tag = "Figure 5") +
+  coord_flip()
+```
+
+### Figure 6: 360 Rankings
+
+```{r}
+ggplot(ranked_candidates_weighted_totals) + 
+  geom_col(aes(x = Candidates, y = Rankings_360, fill = Rankings_360, alpha = Rankings_360)) + 
+  ylab("360 Score") + 
+labs(title = "360 Rankings", fill = "360 Rankings", alpha = "360 Rankings", caption = "Values Range from 0 to 1\n 1 Indicates Most Significant", tag = "Figure 6") + 
+  coord_flip()
+```
+
+### Figure 7: Group Rankings
+
+```{r}
+ggplot(ranked_candidates_weighted_totals) + 
+  geom_col(aes(x = Candidates, y = Group_Average, fill = Group_Average, alpha = Group_Average)) + 
+  ylab("Group Average Score") + 
+    labs(title = "Group Average", fill = "Group Average", alpha = "Group Average", caption = "Values Range from 0 to 1\n 1 is Most Significant", tag = "Figure 7") +  
+  coord_flip()
+```
+
+### Figure 8: Ranked Candidates By Weighted Totals (original)
+
+```{r}
+ggplot(ranked_candidates_weighted_totals) +
+  geom_col(aes(x = candidates_list, y = weighted_totals, fill = candidates_list)) +
+    labs(y = "Weighted Rankings", x = "Candidates", fill = "Candidates", title = "Ranked Candidates By Weighted Totals", Subtitle = "Greater Scores Indicate Better Candidates", caption = "Group Weight: 0.45\n360 Weight: 0.55", tag = "Figure 8") +
+  coord_flip()
+```
+
+### Figure 9: Distribution of Test Set Predictions
+
+```{r fig.align='center'}
+ggplot(test_set, aes(is_promoted_prediction)) + 
+  geom_histogram(color = "white", fill = "lightblue", bins = 30) +
+  labs(title = "Probability Distribution of Employee Promotion Predictions", x = "Prediction of Promotion", caption = "Values Range From 0 to 1\n\nAccuracy: 89.4\nPrecision: 9.58\nRecall: 2.46", tag = "Figure 9")
+```
+
+### Figure 10: Plot of Employee Predictions Model 1
+
+```{r fig.align='center'}
+ggplot(lm_predicted_df, aes(candidates_list, employee_model_prediction)) + 
+  geom_col(aes(fill = candidates_list)) +
+  geom_hline(yintercept = .1) +
+    labs(y = "Predicted Score", x = "Candidate", title = "Model 1: Employee Predictions", subtitle = "Features: \nEducation\nTime at Company\nScores of Peers \nAwards", fill = "Candiates", caption = "AIC: 12,573.18\n p < 0.05:\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02\nAwards Won: Est. 2.26", tag = "Figure 10") +
+  coord_flip()
+```
+
+### Figure 11: Plot of Employee Predictions: Model 2
+
+```{r fig.align='center'}
+ggplot(lm_employee_promotion_prediction_model2, aes(candidates_list, employee_promotion_prediction_model2_sans_awards)) +
+  geom_col(aes(fill = candidates_list)) +
+  geom_hline(yintercept = .1) +
+    labs(title = "Model 2: Employee Predictions", subtitle = "Features: \nEducation \nTime at Company\nScores by Peers", x = "Candidates", y = "Predicted Value", fill = "Candidates", caption = "AIC: 13,109.84\np < 0.05\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02", tag = "Figure 11") +
+  coord_flip()
+```
+
+### Figure 12: Plot of Employee Predictions: Model 3
+
+```{r fig.align='center'}
+ggplot(lm_employee_promotion_prediction_model3, aes(candidates_list, employee_promotion_prediction_model3_sans_awards_education)) +
+  geom_col(aes(fill = candidates_list)) +
+  geom_hline(yintercept = .1) +
+  labs(title = "Model 3: Employee Predictions", subtitle = "Features: \nTime at Company\nScores by Peers", fill = "Candidates", x = "Candidates", y = "Predicted Value", captions = "AIC: 13,107.10\np < 0.05\n Rating From Peers: Est. 2.67\nLength of Service: -0.02", tag = "Figure 12") +
+  coord_flip()
+```
+
+### Figure 13: Weighted Total Rankings Without Model
+
+```{r fig.align='center'}
+ggplot(ranked_candidates_weighted_totals) +
+  geom_col(aes(x = candidates_list, y = weighted_totals, fill = candidates_list, alpha = weighted_totals)) +
+    labs(title = "Weighted Total Rankings", y = "Weighted Rankings", x = "Candidates", fill = "Candidates", alpha = "Weighted Totals", subtitle = "Larger Bars Indicate Better Candidates", tag = "Figure 13") +
+  coord_flip()
+```
+
+### Figure 14: Weighted Total Rankings With Model 1
+
+```{r fig.align='center'}
+ggplot(Ranked_model_1_post_model_scaled_master_candidates_as_rows_df) +
+  geom_col(aes(x = candidates_list, y = totals_model1, fill = candidates_list)) +
+  labs(title = "Weighted Total Rankings Including Model 1", y = "Weighted Rankings", x = "Candidates", fill = "Candidates", subtitle = "Features:\nEducation\nScoring From Peers\nLength of Service\nAwards", caption = "AIC: 12,573.18\n p < 0.05:\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02\nAwards Won: Est. 2.26", tag = "Figure 14") +
+  coord_flip()
+```
+
+### Figure 15: Weighted Total Rankings With Model 2
+
+```{r fig.align='center'}
+ggplot(Ranked_model_2_post_model_scaled_master_candidates_as_rows_df) +
+  geom_col(aes(x = candidates_list, y = totals_model2, fill = candidates_list)) +
+labs(title = "Weighted Total Rankings Including Model 2", y = "Weighted Rankings", x = "Candidates", fill = "Candidates", subtitle = "Features:\nEducation\nScoring From Peers\nTime at Company", caption = "AIC: 13,109.84\np < 0.05\nMaster's & Above: Est. 0.23\nRating From Peers: Est. 2.67\nLength of Service: Est. -0.02", tag = "Figure 15") +
+  coord_flip()
+```
+
+### Figure 16: Weighted Total Rankings With Model 3
+
+```{r fig.align='center'}
+ggplot(Ranked_model_3_post_model_scaled_master_candidates_as_rows_df) +
+  geom_col(aes(x = candidates_list, y = totals_model3, fill = candidates_list)) +
+    labs(title = "Weighted Total Rankings Including Model 3", y = "Weighted Rankings", x = "Candidates", fill = "Candidates", subtitle = "Features:\nScoring from Peers\nLength of Service", captions = "AIC: 13,107.10\np < 0.05\n Rating From Peers: Est. 2.67\nLength of Service: Est. -0.02", tag = "Figure 16") +
+  coord_flip()
+```
